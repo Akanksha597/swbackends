@@ -9,16 +9,16 @@ const {
   downloadPdf
 } = require("../controllers/pdfcontroller");
 
-// Upload
+// Upload PDF
 router.post("/admin/upload-pdf", upload.single("pdf"), uploadPdf);
 
-// Get all
+// Get all PDFs
 router.get("/pdfs", getAllPdfs);
 
-// View
+// View PDF
 router.get("/view/:id", viewPdf);
 
-// Download
+// Download PDF
 router.get("/download/:id", downloadPdf);
 
 module.exports = router;
