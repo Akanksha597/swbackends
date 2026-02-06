@@ -4,24 +4,19 @@ const PdfFile = require("../models/PdfFile");
 exports.uploadPdf = async (req, res) => {
   try {
     const { title } = req.body;
-
     if (!req.file) {
       return res.status(400).json({ success: false, message: "PDF required" });
     }
 
     const pdf = await PdfFile.create({
       title,
-      fileName: req.file.filename,
-      filePath: req.file.path, // local path
+      filePath: req.file.path, // Cloudinary secure URL
     });
 
-    res.status(201).json({
-      success: true,
-      message: "PDF uploaded successfully",
-      data: pdf,
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(201).json({ success: true, data: pdf });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -35,18 +30,14 @@ exports.getAllPdfs = async (req, res) => {
 exports.updatePdf = async (req, res) => {
   try {
     const { id } = req.params;
-
     const updateData = { title: req.body.title };
 
-    if (req.file) {
-      updateData.fileName = req.file.filename;
-      updateData.filePath = req.file.path;
-    }
+    if (req.file) updateData.filePath = req.file.path;
 
     await PdfFile.findByIdAndUpdate(id, updateData);
     res.json({ success: true, message: "PDF updated successfully" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -54,18 +45,9 @@ exports.updatePdf = async (req, res) => {
 exports.deletePdf = async (req, res) => {
   try {
     const { id } = req.params;
-    const pdf = await PdfFile.findByIdAndDelete(id);
-
-    // Remove file from disk
-    if (pdf && pdf.filePath) {
-      const fs = require("fs");
-      fs.unlink(pdf.filePath, (err) => {
-        if (err) console.error("Failed to delete PDF file:", err);
-      });
-    }
-
+    await PdfFile.findByIdAndDelete(id);
     res.json({ success: true, message: "PDF deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
