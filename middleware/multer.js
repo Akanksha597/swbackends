@@ -11,18 +11,13 @@ cloudinary.config({
 
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: async (req, file) => {
-    let folder = 'blogs';
-    if (req.originalUrl.includes('portfolio')) folder = 'portfolio';
-    return {
-      folder,
-      allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
-      transformation: [{ width: 800, height: 800, crop: 'limit' }], // bigger for portfolio
-    };
-  },
+  params: async (req, file) => ({
+    folder: 'pdfs',           // Cloudinary folder
+    resource_type: 'raw',     // IMPORTANT for PDF
+    allowed_formats: ['pdf'], // Allow PDFs only
+  }),
 });
 
-
 const parser = multer({ storage });
-module.exports = parser;
 
+module.exports = parser;
