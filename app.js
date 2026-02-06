@@ -1,22 +1,32 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const connectDB = require("./config/db");
+const connectDB = require("./config/db"); // 👈 important
 
 dotenv.config();
+
+let isConnected = false;
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connect DB ONCE (serverless-safe)
-connectDB().catch(err => {
-  console.error("MongoDB connection error:", err.message);
+// Root route (fixes 404)
+app.get("/", (req, res) => {
+  res.send("Backend is running 🚀");
 });
 
-// Health check
-app.get("/", (req, res) => {
-  res.status(200).send("Backend is running 🚀");
+// DB connection
+app.use(async (req, res, next) => {
+  if (!isConnected) {
+    try {
+      await connectDB();
+      isConnected = true;
+    } catch (err) {
+      return res.status(500).json({ error: "Database connection failed" });
+    }
+  }
+  next();
 });
 
 // Routes

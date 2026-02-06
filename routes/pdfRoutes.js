@@ -6,16 +6,19 @@ const {
   uploadPdf,
   getAllPdfs,
   viewPdf,
-  downloadPdf,
-  updatePdf,
-  deletePdf
+  downloadPdf
 } = require("../controllers/pdfcontroller");
 
+// Upload
 router.post("/admin/upload-pdf", upload.single("pdf"), uploadPdf);
+
+// Get all
 router.get("/pdfs", getAllPdfs);
+
+// View
 router.get("/view/:id", viewPdf);
+
+// Download
 router.get("/download/:id", downloadPdf);
-router.put("/update/:id", upload.single("pdf"), updatePdf);
-router.delete("/delete/:id", deletePdf);
 
 module.exports = router;
