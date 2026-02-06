@@ -7,18 +7,11 @@ const {
   getAllPdfs,
   viewPdf,
   downloadPdf
-} = require("../controllers/pdfcontroller");
+} = require("../controllers/pdfcontroller"); // ✅ correct casing
 
-// Upload PDF
 router.post("/admin/upload-pdf", upload.single("pdf"), uploadPdf);
-
-// Get all PDFs
 router.get("/pdfs", getAllPdfs);
-
-// View PDF
 router.get("/view/:id", viewPdf);
-
-// Download PDF
 router.get("/download/:id", downloadPdf);
 
 module.exports = router;
