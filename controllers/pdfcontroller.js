@@ -1,6 +1,6 @@
 const PdfFile = require("../models/PdfFile");
 
-/* ========== UPLOAD PDF (ADMIN) ========== */
+// UPLOAD PDF
 exports.uploadPdf = async (req, res) => {
   try {
     const { title } = req.body;
@@ -12,7 +12,7 @@ exports.uploadPdf = async (req, res) => {
     const pdf = await PdfFile.create({
       title,
       fileName: req.file.filename,
-      filePath: req.file.path,
+      filePath: req.file.path, // local path
     });
 
     res.status(201).json({
@@ -25,11 +25,12 @@ exports.uploadPdf = async (req, res) => {
   }
 };
 
-/* ========== GET ALL PDFS ========== */
+// GET ALL PDFs
 exports.getAllPdfs = async (req, res) => {
   const pdfs = await PdfFile.find().sort({ createdAt: -1 });
   res.json({ success: true, data: pdfs });
 };
+
 // UPDATE PDF
 exports.updatePdf = async (req, res) => {
   try {
@@ -53,7 +54,16 @@ exports.updatePdf = async (req, res) => {
 exports.deletePdf = async (req, res) => {
   try {
     const { id } = req.params;
-    await PdfFile.findByIdAndDelete(id);
+    const pdf = await PdfFile.findByIdAndDelete(id);
+
+    // Remove file from disk
+    if (pdf && pdf.filePath) {
+      const fs = require("fs");
+      fs.unlink(pdf.filePath, (err) => {
+        if (err) console.error("Failed to delete PDF file:", err);
+      });
+    }
+
     res.json({ success: true, message: "PDF deleted successfully" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
