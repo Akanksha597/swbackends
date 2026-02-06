@@ -4,12 +4,12 @@ const sendWhatsAppPdf = require("../utils/sendWhatsAppPdf");
 
 exports.downloadPdf = async (req, res) => {
   try {
-    const { pdfId, mobileNumber } = req.body;
+    const { pdfId, mobileNumber, actionType } = req.body;
 
-    if (!pdfId || !mobileNumber) {
+    if (!pdfId || !mobileNumber || !actionType) {
       return res.status(400).json({
         success: false,
-        message: "pdfId and mobileNumber are required",
+        message: "pdfId, mobileNumber and actionType are required",
       });
     }
 
@@ -21,26 +21,28 @@ exports.downloadPdf = async (req, res) => {
       });
     }
 
+    // Save download/whatsapp action
     await DownloadLead.create({
       mobileNumber,
       pdfId,
-      action: "whatsapp",
+      action: actionType, // "download" or "whatsapp"
       ipAddress: req.ip,
     });
 
-const pdfUrl = `${process.env.BASE_URL}/${pdf.filePath.replace(/\\/g, "/")}`;
+    // ⚡ Use Cloudinary URL directly
+    const pdfUrl = pdf.filePath;
 
-const whatsappUrl = sendWhatsAppPdf({
-  mobileNumber,
-  pdfUrl,
-});
+    // Only generate WhatsApp link if action is whatsapp
+    const whatsappUrl =
+      actionType === "whatsapp"
+        ? sendWhatsAppPdf({ mobileNumber, pdfUrl })
+        : null;
 
-res.json({
-  success: true,
-  pdfUrl,      // ✅ Add this
-  whatsappUrl, // ✅ Already exists
-});
-
+    res.json({
+      success: true,
+      pdfUrl,
+      whatsappUrl,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({
@@ -53,7 +55,7 @@ res.json({
 exports.getAllDownloadLeads = async (req, res) => {
   try {
     const leads = await DownloadLead.find()
-      .populate("pdfId", "title") // show pdf title
+      .populate("pdfId", "title")
       .sort({ createdAt: -1 });
 
     res.json({
