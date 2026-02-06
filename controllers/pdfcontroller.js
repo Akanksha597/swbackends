@@ -1,12 +1,69 @@
 // controllers/pdfController.js
-const { v2: cloudinary } = require("cloudinary");
+const cloudinary = require("../config/cloudinary"); // import our config
 const PdfFile = require("../models/PdfFile");
+const streamifier = require("streamifier");
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+exports.uploadPdf = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
+
+    const uploadFromBuffer = (buffer) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "pdfs", resource_type: "raw" },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        streamifier.createReadStream(buffer).pipe(stream);
+      });
+    };
+
+    const result = await uploadFromBuffer(req.file.buffer);
+
+    const pdf = await PdfFile.create({ title: req.body.title, filePath: result.secure_url });
+
+    res.status(201).json({ success: true, data: pdf });
+
+  } catch (err) {
+    console.error("Upload Error:", err);
+    res.status(500).json({ success: false, message: "Cloudinary upload failed", error: err.message });
+  }
+};
+
+
+exports.uploadPdf = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
+
+    // Helper function to upload buffer via stream
+    const uploadFromBuffer = (buffer) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "pdfs", resource_type: "raw" },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        streamifier.createReadStream(buffer).pipe(stream);
+      });
+    };
+
+    const result = await uploadFromBuffer(req.file.buffer);
+
+    // Save PDF info to database
+    const pdf = await PdfFile.create({ title: req.body.title, filePath: result.secure_url });
+
+    res.status(201).json({ success: true, data: pdf });
+
+  } catch (err) {
+    console.error("Upload Error:", err);
+    res.status(500).json({ success: false, message: "Cloudinary upload failed", error: err.message });
+  }
+};
+
 
 exports.uploadPdf = async (req, res) => {
   try {
