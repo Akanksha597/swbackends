@@ -189,20 +189,20 @@ exports.viewPdf = async (req, res) => {
     const pdf = await PdfFile.findById(req.params.id);
     if (!pdf) return res.status(404).json({ message: "PDF not found" });
 
-    const response = await axios.get(pdf.filePath, {
-      responseType: "stream"
-    });
+    const response = await fetch(pdf.filePath);
+    if (!response.ok) throw new Error("Failed to fetch PDF");
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", "inline");
 
-    response.data.pipe(res);
+    response.body.pipe(res);
 
   } catch (err) {
-    console.error("View Error:", err);
+    console.error("VIEW ERROR:", err.message);
     res.status(500).json({ message: "View failed" });
   }
 };
+
 
 /* ================= DOWNLOAD PDF ================= */
 exports.downloadPdf = async (req, res) => {
@@ -210,9 +210,8 @@ exports.downloadPdf = async (req, res) => {
     const pdf = await PdfFile.findById(req.params.id);
     if (!pdf) return res.status(404).json({ message: "PDF not found" });
 
-    const response = await axios.get(pdf.filePath, {
-      responseType: "stream"
-    });
+    const response = await fetch(pdf.filePath);
+    if (!response.ok) throw new Error("Failed to fetch PDF");
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
@@ -220,10 +219,11 @@ exports.downloadPdf = async (req, res) => {
       `attachment; filename="${pdf.title}.pdf"`
     );
 
-    response.data.pipe(res);
+    response.body.pipe(res);
 
   } catch (err) {
-    console.error("Download Error:", err);
+    console.error("DOWNLOAD ERROR:", err.message);
     res.status(500).json({ message: "Download failed" });
   }
 };
+
