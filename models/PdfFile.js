@@ -2,8 +2,8 @@ const mongoose = require("mongoose");
 
 const pdfFileSchema = new mongoose.Schema(
   {
-    title: String,
-    filePath: String, // uploads/pdfs/test.pdf
+    title: { type: String, required: true },
+    filePath: { type: String, required: true }, // Cloudinary URL
   },
   { timestamps: true }
 );
