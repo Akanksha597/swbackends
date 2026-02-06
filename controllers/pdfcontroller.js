@@ -1,179 +1,34 @@
-// // controllers/pdfController.js
-// const cloudinary = require("../config/cloudinary"); // import our config
-// const PdfFile = require("../models/PdfFile");
-// const streamifier = require("streamifier");
-
-// exports.uploadPdf = async (req, res) => {
-//   try {
-//     if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
-
-//     const uploadFromBuffer = (buffer) => {
-//       return new Promise((resolve, reject) => {
-//         const stream = cloudinary.uploader.upload_stream(
-//           { folder: "pdfs", resource_type: "raw" },
-//           (error, result) => {
-//             if (error) return reject(error);
-//             resolve(result);
-//           }
-//         );
-//         streamifier.createReadStream(buffer).pipe(stream);
-//       });
-//     };
-
-//     const result = await uploadFromBuffer(req.file.buffer);
-
-//     const pdf = await PdfFile.create({ title: req.body.title, filePath: result.secure_url });
-
-//     res.status(201).json({ success: true, data: pdf });
-
-//   } catch (err) {
-//     console.error("Upload Error:", err);
-//     res.status(500).json({ success: false, message: "Cloudinary upload failed", error: err.message });
-//   }
-// };
-
-
-// exports.uploadPdf = async (req, res) => {
-//   try {
-//     if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
-
-//     // Helper function to upload buffer via stream
-//     const uploadFromBuffer = (buffer) => {
-//       return new Promise((resolve, reject) => {
-//         const stream = cloudinary.uploader.upload_stream(
-//           { folder: "pdfs", resource_type: "raw" },
-//           (error, result) => {
-//             if (error) return reject(error);
-//             resolve(result);
-//           }
-//         );
-//         streamifier.createReadStream(buffer).pipe(stream);
-//       });
-//     };
-
-//     const result = await uploadFromBuffer(req.file.buffer);
-
-//     // Save PDF info to database
-//     const pdf = await PdfFile.create({ title: req.body.title, filePath: result.secure_url });
-
-//     res.status(201).json({ success: true, data: pdf });
-
-//   } catch (err) {
-//     console.error("Upload Error:", err);
-//     res.status(500).json({ success: false, message: "Cloudinary upload failed", error: err.message });
-//   }
-// };
-
-
-// exports.uploadPdf = async (req, res) => {
-//   try {
-//     if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
-
-//     // Upload buffer to Cloudinary
-//     const result = await cloudinary.uploader.upload_stream(
-//       { folder: "pdfs", resource_type: "raw" },
-//       async (error, result) => {
-//         if (error) {
-//           console.error("Cloudinary Error:", error);
-//           return res.status(500).json({ success: false, message: "Cloudinary upload failed" });
-//         }
-
-//         // Save to DB
-//         const pdf = await PdfFile.create({ title: req.body.title, filePath: result.secure_url });
-//         return res.status(201).json({ success: true, data: pdf });
-//       }
-//     );
-
-//     // Convert buffer to stream
-//     const stream = require("stream");
-//     const bufferStream = new stream.PassThrough();
-//     bufferStream.end(req.file.buffer);
-//     bufferStream.pipe(result);
-
-//   } catch (err) {
-//     console.error("Upload Error:", err);
-//     res.status(500).json({ success: false, message: err.message });
-//   }
-// };
-
-
-
-
-// // GET ALL PDFs
-// exports.getAllPdfs = async (req, res) => {
-//   const pdfs = await PdfFile.find().sort({ createdAt: -1 });
-//   res.json({ success: true, data: pdfs });
-// };
-
-// // UPDATE PDF
-// exports.updatePdf = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const updateData = { title: req.body.title };
-
-//     if (req.file) updateData.filePath = req.file.path;
-
-//     await PdfFile.findByIdAndUpdate(id, updateData);
-//     res.json({ success: true, message: "PDF updated successfully" });
-//   } catch (err) {
-//     res.status(500).json({ success: false, message: err.message });
-//   }
-// };
-
-// // DELETE PDF
-// exports.deletePdf = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     await PdfFile.findByIdAndDelete(id);
-//     res.json({ success: true, message: "PDF deleted successfully" });
-//   } catch (err) {
-//     res.status(500).json({ success: false, message: err.message });
-//   }
-// };
-
-
 const cloudinary = require("../config/cloudinary");
 const PdfFile = require("../models/PdfFile");
 const streamifier = require("streamifier");
-const axios = require("axios");
 
 /* ================= UPLOAD PDF ================= */
 exports.uploadPdf = async (req, res) => {
   try {
-    if (!req.file) {
+    if (!req.file)
       return res.status(400).json({ success: false, message: "No file uploaded" });
-    }
 
-    const uploadFromBuffer = (buffer) => {
-      return new Promise((resolve, reject) => {
+    const uploadFromBuffer = (buffer) =>
+      new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          {
-            folder: "pdfs",
-            resource_type: "raw",
-            format: "pdf"
-          },
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result);
-          }
+          { folder: "pdfs", resource_type: "raw", format: "pdf" },
+          (err, result) => (err ? reject(err) : resolve(result))
         );
-
         streamifier.createReadStream(buffer).pipe(stream);
       });
-    };
 
     const result = await uploadFromBuffer(req.file.buffer);
 
     const pdf = await PdfFile.create({
       title: req.body.title,
-      filePath: result.secure_url
+      filePath: result.secure_url,
+      public_id: result.public_id
     });
 
     res.status(201).json({ success: true, data: pdf });
 
   } catch (err) {
-    console.error("Upload Error:", err);
-    res.status(500).json({ success: false, message: "Upload failed" });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -189,20 +44,13 @@ exports.viewPdf = async (req, res) => {
     const pdf = await PdfFile.findById(req.params.id);
     if (!pdf) return res.status(404).json({ message: "PDF not found" });
 
-    const response = await fetch(pdf.filePath);
-    if (!response.ok) throw new Error("Failed to fetch PDF");
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", "inline");
-
-    response.body.pipe(res);
+    // Redirect to Cloudinary URL (browser will open PDF)
+    res.redirect(pdf.filePath);
 
   } catch (err) {
-    console.error("VIEW ERROR:", err.message);
     res.status(500).json({ message: "View failed" });
   }
 };
-
 
 /* ================= DOWNLOAD PDF ================= */
 exports.downloadPdf = async (req, res) => {
@@ -210,20 +58,69 @@ exports.downloadPdf = async (req, res) => {
     const pdf = await PdfFile.findById(req.params.id);
     if (!pdf) return res.status(404).json({ message: "PDF not found" });
 
-    const response = await fetch(pdf.filePath);
-    if (!response.ok) throw new Error("Failed to fetch PDF");
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${pdf.title}.pdf"`
-    );
-
-    response.body.pipe(res);
+    res.redirect(pdf.filePath + "?dl=1");
 
   } catch (err) {
-    console.error("DOWNLOAD ERROR:", err.message);
     res.status(500).json({ message: "Download failed" });
   }
 };
 
+/* ================= UPDATE PDF ================= */
+exports.updatePdf = async (req, res) => {
+  try {
+    const pdf = await PdfFile.findById(req.params.id);
+    if (!pdf) return res.status(404).json({ message: "PDF not found" });
+
+    // Update title
+    if (req.body.title) pdf.title = req.body.title;
+
+    // If new PDF uploaded
+    if (req.file) {
+      // delete old pdf from cloudinary
+      await cloudinary.uploader.destroy(pdf.public_id, {
+        resource_type: "raw"
+      });
+
+      const uploadFromBuffer = (buffer) =>
+        new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: "pdfs", resource_type: "raw", format: "pdf" },
+            (err, result) => (err ? reject(err) : resolve(result))
+          );
+          streamifier.createReadStream(buffer).pipe(stream);
+        });
+
+      const result = await uploadFromBuffer(req.file.buffer);
+
+      pdf.filePath = result.secure_url;
+      pdf.public_id = result.public_id;
+    }
+
+    await pdf.save();
+    res.json({ success: true, message: "PDF updated successfully", data: pdf });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/* ================= DELETE PDF ================= */
+exports.deletePdf = async (req, res) => {
+  try {
+    const pdf = await PdfFile.findById(req.params.id);
+    if (!pdf) return res.status(404).json({ message: "PDF not found" });
+
+    // delete from cloudinary
+    await cloudinary.uploader.destroy(pdf.public_id, {
+      resource_type: "raw"
+    });
+
+    // delete from database
+    await pdf.deleteOne();
+
+    res.json({ success: true, message: "PDF deleted successfully" });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
