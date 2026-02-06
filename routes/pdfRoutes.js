@@ -14,20 +14,23 @@ router.get("/pdfs", getAllPdfs);
 router.get("/download/:id", async (req, res) => {
   try {
     const pdf = await PdfFile.findById(req.params.id);
-    if (!pdf) return res.status(404).json({ success: false, message: "PDF not found" });
+    if (!pdf) {
+      return res.status(404).json({ success: false, message: "PDF not found" });
+    }
 
-    // Set headers to force download with proper filename
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${pdf.title}.pdf"`
+    // Force download with proper filename
+    const downloadUrl = pdf.filePath.replace(
+      "/upload/",
+      `/upload/fl_attachment:${encodeURIComponent(pdf.title)}.pdf/`
     );
 
-    // Redirect to the Cloudinary URL
-    res.redirect(pdf.filePath);
+    return res.redirect(downloadUrl);
+
   } catch (err) {
     console.error("Download Error:", err);
-    res.status(500).json({ success: false, message: "Failed to download PDF", error: err.message });
+    res.status(500).json({ success: false, message: "Download failed" });
   }
 });
+
 
 module.exports = router;
