@@ -1,142 +1,95 @@
 const cloudinary = require("../config/cloudinary");
 const PdfFile = require("../models/PdfFile");
-const fs = require("fs");
+const streamifier = require("streamifier");
+const axios = require("axios");
 
-/* ============ UPLOAD PDF ============ */
+/* ================= UPLOAD PDF ================= */
 exports.uploadPdf = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+      return res.status(400).json({ success: false, message: "No file uploaded" });
     }
 
-    // Upload as RAW (VERY IMPORTANT)
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: "pdfs",
-      resource_type: "raw"
-    });
+    const uploadFromBuffer = (buffer) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "pdfs",
+            resource_type: "raw",
+            format: "pdf"
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
 
-    // remove local file
-    fs.unlinkSync(req.file.path);
+        streamifier.createReadStream(buffer).pipe(stream);
+      });
+    };
+
+    const result = await uploadFromBuffer(req.file.buffer);
 
     const pdf = await PdfFile.create({
       title: req.body.title,
-      filePath: result.secure_url,
-      public_id: result.public_id
+      filePath: result.secure_url
     });
 
-    res.status(201).json({
-      success: true,
-      data: pdf
-    });
+    res.status(201).json({ success: true, data: pdf });
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Upload Error:", err);
+    res.status(500).json({ success: false, message: "Upload failed" });
   }
 };
 
-/* ============ GET ALL PDFs ============ */
+/* ================= GET ALL PDFs ================= */
 exports.getAllPdfs = async (req, res) => {
-  try {
-    const pdfs = await PdfFile.find().sort({ createdAt: -1 });
-    res.json({ success: true, data: pdfs });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+  const pdfs = await PdfFile.find().sort({ createdAt: -1 });
+  res.json({ success: true, data: pdfs });
 };
 
-/* ============ VIEW PDF ============ */
+/* ================= VIEW PDF ================= */
 exports.viewPdf = async (req, res) => {
   try {
     const pdf = await PdfFile.findById(req.params.id);
-    if (!pdf) {
-      return res.status(404).json({ message: "PDF not found" });
-    }
+    if (!pdf) return res.status(404).json({ message: "PDF not found" });
 
-    // Redirect to Cloudinary RAW URL
-    res.redirect(pdf.filePath);
+    const response = await axios.get(pdf.filePath, {
+      responseType: "stream"
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "inline");
+
+    response.data.pipe(res);
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("View Error:", err);
+    res.status(500).json({ message: "View failed" });
   }
 };
 
-/* ============ DOWNLOAD PDF ============ */
+/* ================= DOWNLOAD PDF ================= */
 exports.downloadPdf = async (req, res) => {
   try {
     const pdf = await PdfFile.findById(req.params.id);
-    if (!pdf) {
-      return res.status(404).json({ message: "PDF not found" });
-    }
+    if (!pdf) return res.status(404).json({ message: "PDF not found" });
 
-    res.redirect(pdf.filePath + "?dl=1");
-
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-/* ============ UPDATE PDF ============ */
-exports.updatePdf = async (req, res) => {
-  try {
-    const pdf = await PdfFile.findById(req.params.id);
-    if (!pdf) {
-      return res.status(404).json({ message: "PDF not found" });
-    }
-
-    if (req.body.title) {
-      pdf.title = req.body.title;
-    }
-
-    if (req.file) {
-      // delete old pdf
-      await cloudinary.uploader.destroy(pdf.public_id, {
-        resource_type: "raw"
-      });
-
-      // upload new pdf
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: "pdfs",
-        resource_type: "raw"
-      });
-
-      fs.unlinkSync(req.file.path);
-
-      pdf.filePath = result.secure_url;
-      pdf.public_id = result.public_id;
-    }
-
-    await pdf.save();
-
-    res.json({
-      success: true,
-      message: "PDF updated successfully"
+    const response = await axios.get(pdf.filePath, {
+      responseType: "stream"
     });
 
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${pdf.title}.pdf"`
+    );
 
-/* ============ DELETE PDF ============ */
-exports.deletePdf = async (req, res) => {
-  try {
-    const pdf = await PdfFile.findById(req.params.id);
-    if (!pdf) {
-      return res.status(404).json({ message: "PDF not found" });
-    }
-
-    await cloudinary.uploader.destroy(pdf.public_id, {
-      resource_type: "raw"
-    });
-
-    await pdf.deleteOne();
-
-    res.json({
-      success: true,
-      message: "PDF deleted successfully"
-    });
+    response.data.pipe(res);
 
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Download Error:", err);
+    res.status(500).json({ message: "Download failed" });
   }
 };
