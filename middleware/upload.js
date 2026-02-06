@@ -14,10 +14,11 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: "pdfs",           // Cloudinary folder
-    resource_type: "raw",     // MUST for PDFs
-    allowed_formats: ["pdf"], // Only PDFs
+    folder: "pdfs",
+    resource_type: "raw",
+    allowed_formats: ["pdf"],
   },
 });
+
 
 module.exports = multer({ storage });

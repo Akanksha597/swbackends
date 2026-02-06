@@ -3,22 +3,24 @@ const PdfFile = require("../models/PdfFile");
 // UPLOAD PDF
 exports.uploadPdf = async (req, res) => {
   try {
-    const { title } = req.body;
     if (!req.file) {
-      return res.status(400).json({ success: false, message: "PDF required" });
+      return res.status(400).json({ success: false, message: "PDF file is required" });
     }
 
+    const { title } = req.body;
+
     const pdf = await PdfFile.create({
-      title,
-      filePath: req.file.path, // Cloudinary secure URL
+      title: title || req.file.originalname,
+      filePath: req.file.path, // Cloudinary URL
     });
 
     res.status(201).json({ success: true, data: pdf });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: err.message });
+    console.error("Upload PDF Error:", err.message);
+    res.status(500).json({ success: false, error: err.message });
   }
 };
+
 
 // GET ALL PDFs
 exports.getAllPdfs = async (req, res) => {
